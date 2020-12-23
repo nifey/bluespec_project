@@ -1,8 +1,10 @@
 package Defines;
 	import CBus::*;
+	import BRAM::*;
 
 	typedef 6 BusAddrWidth;
 	typedef 32 BusDataWidth;
+	typedef 32 MemAddrWidth;
 
 	// Define the Bus
 	typedef CBus#(BusAddrWidth, BusDataWidth)		Bus;
@@ -14,11 +16,11 @@ package Defines;
 	typedef bit		TCfgDone;	// Signals the CPU that the accelerator has finished
 	typedef bit		TCfgError;	// Indicates an error
 
-	typedef UInt#(32)	TPointer;	// Holds a pointer to memory
+	typedef Bit#(32)	TPointer;	// Holds a pointer to memory
 	typedef UInt#(32)	TBlockSize;	// Holds block size for vector copy and vector xor
 	typedef UInt#(16)	TDimension;	// Holds the matrix dimension for matrix transpose
 	
-	typedef UInt#(32)	TMemAddress;	// Holds an address in Memory module
+	typedef Bit#(32)	TMemAddress;	// Holds an address in Memory module
 	typedef UInt#(32)	TMemData;	// Holds a data in Memory module
 
 	// Configuration Bus addresses
@@ -32,4 +34,23 @@ package Defines;
 	BusAddr cfgMemMARAddr = BusAddr {a:38, o:0};
 	BusAddr cfgMemMIDRAddr = BusAddr {a:39, o:0};
 	BusAddr cfgMemMODRAddr = BusAddr {a:40, o:0};
+
+	function BRAMRequest#(Bit#(MemAddrWidth), Bit#(BusDataWidth)) makeReadRequest(Bit#(MemAddrWidth) addr);
+		return BRAMRequest{
+			write: False,
+			responseOnWrite:False,
+			address: addr,
+			datain: 0
+		};
+	endfunction
+
+	function BRAMRequest#(Bit#(MemAddrWidth), Bit#(BusDataWidth)) makeWriteRequest(Bit#(MemAddrWidth) addr, Bit#(BusDataWidth) data);
+		return BRAMRequest{
+			write: True,
+			responseOnWrite:False,
+			address: addr,
+			datain: data
+		};
+	endfunction
+
 endpackage
