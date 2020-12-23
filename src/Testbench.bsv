@@ -5,6 +5,7 @@ package Testbench;
 	import BRAM::*;
 	import Connectable::*;
 	import Clocks::*;
+	import CBus::*;
 
 	(* synthesize *)
 	module mkTestbench(Empty);
@@ -14,12 +15,14 @@ package Testbench;
 		cfg.loadFormat = tagged Hex "memory.hex";
 
 		BRAM2Port#(Bit#(MemAddrWidth), Bit#(BusDataWidth)) memory <- mkBRAM2Server(cfg);
-		Ifc_Accelerator accel <- mkAcceleratorTest();
-		mkConnection(accel.portA, memory.portA);
-		mkConnection(accel.portB, memory.portB);
+		IWithCBus#(Bus, Ifc_Accelerator) accel <- mkAcceleratorTest;
+		mkConnection(accel.device_ifc.portA, memory.portA);
+		mkConnection(accel.device_ifc.portB, memory.portB);
 
 		let test =
 		seq
+			delay(10);
+			accel.cbus_ifc.write(7, 77);
 			delay(100);
 			$finish(0);
 		endseq;

@@ -4,7 +4,7 @@ package Defines;
 
 	typedef 6 BusAddrWidth;
 	typedef 32 BusDataWidth;
-	typedef 32 MemAddrWidth;
+	typedef 12 MemAddrWidth;
 
 	// Define the Bus
 	typedef CBus#(BusAddrWidth, BusDataWidth)		Bus;

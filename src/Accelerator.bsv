@@ -4,25 +4,36 @@ package Accelerator;
 	import BRAM::*;
 	import FIFO::*;
 	import SpecialFIFOs::*;
+	import CBus::*;
 
 	interface Ifc_Accelerator;
 		interface BRAMClient#(Bit#(MemAddrWidth), Bit#(BusDataWidth)) portA;
 		interface BRAMClient#(Bit#(MemAddrWidth), Bit#(BusDataWidth)) portB;
 	endinterface
 
-	module mkAcceleratorTest(Ifc_Accelerator);
-		Reg#(Bit#(10)) address <- mkReg(0);
-		Reg#(Bit#(32)) counter <- mkReg(0);
+	(* synthesize *)
+	module mkAcceleratorTest(IWithCBus#(Bus, Ifc_Accelerator));
+		let ifc <- exposeCBusIFC(mkAcceleratorSynth);
+		return ifc;
+	endmodule
+
+	module [ModWithBus] mkAcceleratorSynth(Ifc_Accelerator);
 		FIFO#(BRAMRequest#(Bit#(MemAddrWidth), Bit#(BusDataWidth))) requestFIFOA <- mkBypassFIFO;
-		FIFO#(Bit#(BusDataWidth)) responseFIFOA <- mkFIFO1;
+		FIFO#(Bit#(BusDataWidth)) responseFIFOA <- mkBypassFIFO;
 		FIFO#(BRAMRequest#(Bit#(MemAddrWidth), Bit#(BusDataWidth))) requestFIFOB <- mkBypassFIFO;
-		FIFO#(Bit#(BusDataWidth)) responseFIFOB <- mkFIFO1;
+		FIFO#(Bit#(BusDataWidth)) responseFIFOB <- mkBypassFIFO;
+
+		BusAddr address = BusAddr{a:7, o:0};
+		Reg#(Bit#(32)) value <- mkCBRegRW(address, 0);
 
 		let actions =
 		seq
-			requestFIFOA.enq(makeWriteRequest(0, 10));
-			requestFIFOA.enq(makeWriteRequest(2, 11));
-			requestFIFOA.enq(makeWriteRequest(4, 12));
+			while (value == 0) action
+				$display ("Waiting");
+			endaction
+			requestFIFOA.enq(makeWriteRequest(0, value));
+			requestFIFOA.enq(makeWriteRequest(2, value));
+			requestFIFOA.enq(makeWriteRequest(4, value));
 
 			requestFIFOB.enq(makeReadRequest(0));
 			$display("%x => %x", 0, responseFIFOB.first());
