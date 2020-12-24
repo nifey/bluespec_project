@@ -20,23 +20,26 @@ package Defines;
 	typedef UInt#(32)	TBlockSize;	// Holds block size for vector copy and vector xor
 	typedef UInt#(16)	TDimension;	// Holds the matrix dimension for matrix transpose
 	
-	typedef Bit#(32)	TMemAddress;	// Holds an address in Memory module
-	typedef UInt#(32)	TMemData;	// Holds a data in Memory module
-
 	// Configuration Bus addresses
 	Bit#(BusAddrWidth)	cfg_VX_addr = 0;	// Start address of Vector XOR CSRs
-	Bit#(BusAddrWidth)	cfg_VC_addr = 12;	// Start address of Vector copy CSRs
-	Bit#(BusAddrWidth)	cfg_MT_addr = 28;	// Start address of Matrix transpose CSRs
+	Bit#(BusAddrWidth)	cfg_VC_addr = 15;	// Start address of Vector copy CSRs
+	Bit#(BusAddrWidth)	cfg_MT_addr = 31;	// Start address of Matrix transpose CSRs
 
-	// Memory CSR addresses
-	BusAddr cfgMemRWBitAddr = BusAddr {a:37, o:0};
-	BusAddr cfgMemEnBitAddr = BusAddr {a:37, o:1};
-	BusAddr cfgMemMARAddr = BusAddr {a:38, o:0};
-	BusAddr cfgMemMIDRAddr = BusAddr {a:39, o:0};
-	BusAddr cfgMemMODRAddr = BusAddr {a:40, o:0};
+	// Offsets from the base address of the accelerator
+	BusAddr cfg_start_offset = BusAddr {a:0, o:0};
+	BusAddr cfg_done_offset = BusAddr {a:0, o:1};
+	BusAddr cfg_error_offset = BusAddr {a:0, o:2};
+	BusAddr cfg_arg1_offset = BusAddr {a:1, o:0};
+	BusAddr cfg_arg2_offset = BusAddr {a:2, o:0};
+	BusAddr cfg_arg3_offset = BusAddr {a:3, o:0};
+	BusAddr cfg_arg4_offset = BusAddr {a:4, o:0};
 
-	function BRAMRequest#(Bit#(MemAddrWidth), Bit#(BusDataWidth)) makeReadRequest(Bit#(MemAddrWidth) addr);
-		return BRAMRequest{
+	// Define the BRAM memory
+	typedef BRAMRequest#(Bit#(MemAddrWidth), Bit#(BusDataWidth))	MemRequest;
+	typedef BRAMClient#(Bit#(MemAddrWidth), Bit#(BusDataWidth))	MemClient;
+
+	function MemRequest makeReadRequest(Bit#(MemAddrWidth) addr);
+		return MemRequest{
 			write: False,
 			responseOnWrite:False,
 			address: addr,
@@ -44,8 +47,8 @@ package Defines;
 		};
 	endfunction
 
-	function BRAMRequest#(Bit#(MemAddrWidth), Bit#(BusDataWidth)) makeWriteRequest(Bit#(MemAddrWidth) addr, Bit#(BusDataWidth) data);
-		return BRAMRequest{
+	function MemRequest makeWriteRequest(Bit#(MemAddrWidth) addr, Bit#(BusDataWidth) data);
+		return MemRequest{
 			write: True,
 			responseOnWrite:False,
 			address: addr,
