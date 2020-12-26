@@ -5,7 +5,6 @@ package AccelVX;
 	import FIFO::*;
 	import SpecialFIFOs::*;
 	import CBus::*;
-	import Accelerator::*;
 
 	(* synthesize *)
 	module mkAccelVX#(parameter Bit#(BusAddrWidth) id) (IWithCBus#(Bus, Ifc_Accelerator));

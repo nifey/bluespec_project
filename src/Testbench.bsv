@@ -1,8 +1,5 @@
 package Testbench;
 	import Accelerator::*;
-	import AccelVC::*;
-	import AccelVX::*;
-	import AccelMT::*;
 	import StmtFSM::*;
 	import Defines::*;
 	import BRAM::*;
@@ -18,20 +15,31 @@ package Testbench;
 		cfg.loadFormat = tagged Hex "memory.hex";
 
 		BRAM2Port#(Bit#(MemAddrWidth), Bit#(BusDataWidth)) memory <- mkBRAM2Server(cfg);
-		IWithCBus#(Bus, Ifc_Accelerator) accel0 <- mkAccelMT(0);
-		mkConnection(accel0.device_ifc.portA, memory.portA);
-		mkConnection(accel0.device_ifc.portB, memory.portB);
+
+		IWithCBus#(Bus, Ifc_Accelerator) accelerators <- mkAccelerator;
+		mkConnection(accelerators.device_ifc.portA, memory.portA);
+		mkConnection(accelerators.device_ifc.portB, memory.portB);
 
 		Bit#(6) cfg_MT0_addr = cfg_MT_addr + (0*3);
+		Bit#(6) cfg_MT1_addr = cfg_MT_addr + (1*3);
 
 		let test =
 		seq
 			delay(10);
-			accel0.cbus_ifc.write(cfg_MT0_addr + 1, 20);
-			accel0.cbus_ifc.write(cfg_MT0_addr + 2, 40);
-			accel0.cbus_ifc.write(cfg_MT0_addr + 0, unpack('1));
-			delay(100);
-			$finish(0);
+			accelerators.cbus_ifc.write(cfg_MT0_addr + 1, 20);
+			accelerators.cbus_ifc.write(cfg_MT0_addr + 2, 40);
+			accelerators.cbus_ifc.write(cfg_MT0_addr + 0, unpack('1));
+			delay(10);
+			accelerators.cbus_ifc.write(cfg_MT1_addr + 1, 100);
+			accelerators.cbus_ifc.write(cfg_MT1_addr + 2, 200);
+			accelerators.cbus_ifc.write(cfg_MT1_addr + 0, unpack('1));
+			delay(1000);
+
+			// Calling the dumper to dump memory contents
+			accelerators.cbus_ifc.write(cfg_Dump_addr, unpack('1));
+
+			while (True) action
+			endaction
 		endseq;
 
 		mkAutoFSM(test);

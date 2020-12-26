@@ -5,7 +5,7 @@ package AccelMT;
 	import FIFO::*;
 	import SpecialFIFOs::*;
 	import CBus::*;
-	import Accelerator::*;
+	import Clocks::*;
 
 	(* synthesize *)
 	module mkAccelMT#(parameter Bit#(BusAddrWidth) id) (IWithCBus#(Bus, Ifc_Accelerator));
@@ -27,14 +27,24 @@ package AccelMT;
 		Reg#(TPointer) csr_src <- mkCBRegW(base_address + cfg_arg1_offset, 0);
 		Reg#(TPointer) csr_dst <- mkCBRegW(base_address + cfg_arg2_offset, 0);
 
+		Reg#(Bit#(MemAddrWidth)) i <- mkRegU;
 		let actions =
 		seq
 			while (csr_start == 0) action
 				$display("MT",id, "> Waiting");
 			endaction
+			delay(100);
 			csr_done <= 0;
 			$display("MT",id, "> Starting to work with input addresses: %x -> %x", csr_src, csr_dst);
+			requestFIFOB.enq(makeWriteRequest(4, 'h33));
+			for (i <= 0; i<64; i <= i + 4) seq
+				requestFIFOA.enq(makeReadRequest(i));
+				$display("MT", id, " > %d = %x",i, responseFIFOA.first()); responseFIFOA.deq();
+			endseq
 			csr_done <= 1;
+
+			while (True) action
+			endaction
 		endseq;
 
 		mkAutoFSM(actions);
