@@ -31,7 +31,6 @@ package AccelMT;
 		let actions =
 		seq
 			while (csr_start == 0) action
-				$display("MT",id, "> Waiting");
 			endaction
 			delay(100);
 			csr_done <= 0;

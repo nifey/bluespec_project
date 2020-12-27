@@ -18,7 +18,7 @@ package AccelVC;
 		FIFO#(MemRequest) requestFIFOB <- mkBypassFIFO;
 		FIFO#(Bit#(BusDataWidth)) responseFIFOB <- mkBypassFIFO;
 
-		BusAddr base_address = BusAddr{a:cfg_VC_addr + (id*3), o:0};
+		BusAddr base_address = BusAddr{a:cfg_VC_addr + (id*4), o:0};
 		Reg#(TCfgStart) csr_start <- mkCBRegRW(base_address + cfg_start_offset, 0);
 		Reg#(TCfgDone) csr_done <- mkCBRegR(base_address + cfg_done_offset, 0);
 
@@ -29,7 +29,6 @@ package AccelVC;
 		let actions =
 		seq
 			while (csr_start == 0) action
-				$display("VC",id, "> Waiting");
 			endaction
 			csr_done <= 0;
 			$display("VC",id, "> Starting to work with input addresses: %x -> %x", csr_src, csr_dst);
