@@ -28,23 +28,22 @@ package TransposeBox;
 		end
 	endfunction
 
-	interface Ifc_TransposeBox;
-		interface Put#(Maybe#(Bit#(32))) put_element;
-		interface Get#(Maybe#(Bit#(32))) get_element;
+	interface Ifc_TransposeBox#(numeric type word_size);
+		interface Put#(Maybe#(Bit#(word_size))) put_element;
+		interface Get#(Maybe#(Bit#(word_size))) get_element;
 		method Action clear;
 	endinterface 
 
-	(* synthesize *)
-	module mkTransposeBox (Ifc_TransposeBox);
+	module mkTransposeBox (Ifc_TransposeBox#(word_size));
 		Reg#(Bit#(4)) counter1 <- mkReg(0);
 		Reg#(Bit#(2)) counter2 <- mkReg(0);
 
-		Reg#(Vector#(3, Maybe#(Bit#(32)))) data1 <- mkReg(replicate(Invalid));
-		Reg#(Vector#(3, Maybe#(Bit#(32)))) data2 <- mkReg(replicate(Invalid));
-		Reg#(Vector#(3, Maybe#(Bit#(32)))) data3 <- mkReg(replicate(Invalid));
+		Reg#(Vector#(3, Maybe#(Bit#(word_size)))) data1 <- mkReg(replicate(Invalid));
+		Reg#(Vector#(3, Maybe#(Bit#(word_size)))) data2 <- mkReg(replicate(Invalid));
+		Reg#(Vector#(3, Maybe#(Bit#(word_size)))) data3 <- mkReg(replicate(Invalid));
 
-		FIFO#(Maybe#(Bit#(32))) inputFIFO <- mkPipelineFIFO;
-		FIFO#(Maybe#(Bit#(32))) outputFIFO <- mkPipelineFIFO;
+		FIFO#(Maybe#(Bit#(word_size))) inputFIFO <- mkPipelineFIFO;
+		FIFO#(Maybe#(Bit#(word_size))) outputFIFO <- mkPipelineFIFO;
 
 		rule step;
 			Bool s1 = (counter1 <= 2 && counter2 >= 1);

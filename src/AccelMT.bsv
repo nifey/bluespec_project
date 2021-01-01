@@ -6,6 +6,7 @@ package AccelMT;
 	import SpecialFIFOs::*;
 	import CBus::*;
 	import Clocks::*;
+	import TransposeBox::*;
 
 	(* synthesize *)
 	module mkAccelMT#(parameter Bit#(BusAddrWidth) id) (IWithCBus#(Bus, Ifc_Accelerator));
@@ -33,9 +34,14 @@ package AccelMT;
 		Reg#(TDimension) matrix_dst_rows <- mkRegU;
 		Reg#(TDimension) matrix_dst_cols <- mkRegU;
 		Reg#(TPointer) matrix_dst_data <- mkRegU;
+		Reg#(TPointer) src_end_address <- mkRegU;
+		Reg#(TPointer) dst_end_address <- mkRegU;
+
+		Ifc_TransposeBox#(32) transpose_box <- mkTransposeBox;
 
 		Reg#(Bit#(MemAddrWidth)) i <- mkRegU;
 		Reg#(Bit#(MemAddrWidth)) j <- mkRegU;
+		Reg#(Bit#(MemAddrWidth)) k <- mkRegU;
 		let actions =
 		seq
 			while (True) seq
@@ -95,20 +101,47 @@ package AccelMT;
 					endpar
 
 					// Step 2. Do matrix transpose
-					$display("MT", id, " Start transpose at time ", $time);
-					for (i <= 0; i< extend(pack(matrix_src_rows)); i <= i + 1) seq
-						for (j <= 0; j< extend(pack(matrix_src_cols)); j <= j + 1) seq
-							action
-								Bit#(MemAddrWidth) src_address = matrix_src_data + i * extend(pack(matrix_src_cols)) + j;
-								requestFIFOA.enq(makeReadRequest(src_address));
-							endaction
-							action
-								Bit#(MemAddrWidth) dst_address = matrix_dst_data + j * extend(pack(matrix_src_rows)) + i;
-								requestFIFOB.enq(makeWriteRequest(dst_address, responseFIFOA.first()));
+					par
+						$display("MT", id, " Start transpose at time ", $time);
+						action
+							UInt#(32) num_elements = zeroExtend(matrix_src_rows) * zeroExtend(matrix_src_cols);
+							src_end_address <= unpack(matrix_src_data + pack(num_elements));
+							dst_end_address <= unpack(matrix_dst_data + pack(num_elements));
+						endaction
+						transpose_box.clear;
+						k <= matrix_dst_data;
+					endpar
+					par
+						// Creates memory requests to fetch the src matrix
+						for (i <= matrix_src_data; i< src_end_address; i <= i + 1) action
+							requestFIFOA.enq(makeReadRequest(i));
+						endaction
+
+						// Push fetched data into transpose_box (Row major order)
+						for (j <= matrix_src_data; j <= src_end_address; j <= j + 1) seq
+							if (j == src_end_address) seq
+								while (k < dst_end_address) action
+									transpose_box.put_element.put(Invalid);
+								endaction
+							endseq
+							else action
+								transpose_box.put_element.put(tagged Valid responseFIFOA.first());
 								responseFIFOA.deq();
 							endaction
 						endseq
-					endseq
+
+						// Create memory requests to store the transposed matrix
+						while (k < dst_end_address) action
+							let data <- transpose_box.get_element.get;
+							case (data) matches
+								tagged Valid .x : begin
+									requestFIFOB.enq(makeWriteRequest(k, x));
+									k <= k + 1;
+								end
+								tagged Invalid : noAction;
+							endcase
+						endaction
+					endpar
 					$display("MT", id, " End transpose at time ", $time);
 
 					action
