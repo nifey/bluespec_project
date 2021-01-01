@@ -4,7 +4,8 @@ package TransposeBox;
 	import SpecialFIFOs::*;
 	import Vector::*;
 
-	function ActionValue#(Maybe#(t)) permute(Maybe#(t) input_data, Reg#(Vector#(3, Maybe#(t))) data, Bool s);
+	function ActionValue#(Maybe#(t)) permute(Maybe#(t) input_data, Reg#(Vector#(vsize, Maybe#(t))) data, Bool s)
+		provisos (Add#(1, a, vsize));
 		// Basic Permutation Circuit
 		if (s) begin
 			return(
@@ -22,42 +23,51 @@ package TransposeBox;
 					// Put input into the shift register
 					data <= shiftInAt0(data, input_data);
 					// Get output from the shift register
-					return data[3- 1];
+					return last(data);
 				endactionvalue
 			);
 		end
 	endfunction
 
-	interface Ifc_TransposeBox#(numeric type word_size);
+	interface Ifc_TransposeBox#(numeric type word_size, numeric type matrix_dimension);
 		interface Put#(Maybe#(Bit#(word_size))) put_element;
 		interface Get#(Maybe#(Bit#(word_size))) get_element;
 		method Action clear;
 	endinterface 
 
-	module mkTransposeBox (Ifc_TransposeBox#(word_size));
-		Reg#(Bit#(4)) counter1 <- mkReg(0);
-		Reg#(Bit#(2)) counter2 <- mkReg(0);
+	module mkTransposeBox (Ifc_TransposeBox#(word_size, matrix_dimension))
+		provisos (
+			Add#(num_stages, 1, matrix_dimension),
+			Add#(1, a, num_stages),
+			Log#(num_stages, width)
+		);
+		Reg#(Bit#(width)) counter1 <- mkReg(0);
+		Reg#(Bit#(width)) counter2 <- mkReg(0);
 
-		Reg#(Vector#(3, Maybe#(Bit#(word_size)))) data1 <- mkReg(replicate(Invalid));
-		Reg#(Vector#(3, Maybe#(Bit#(word_size)))) data2 <- mkReg(replicate(Invalid));
-		Reg#(Vector#(3, Maybe#(Bit#(word_size)))) data3 <- mkReg(replicate(Invalid));
+		Vector#(num_stages, Reg#(Vector#(num_stages, Maybe#(Bit#(word_size))))) data <- replicateM(mkReg(replicate(Invalid)));
 
 		FIFO#(Maybe#(Bit#(word_size))) inputFIFO <- mkPipelineFIFO;
 		FIFO#(Maybe#(Bit#(word_size))) outputFIFO <- mkPipelineFIFO;
 
+		let num_stages = valueOf(num_stages);
+
 		rule step;
-			Bool s1 = (counter1 <= 2 && counter2 >= 1);
-			Bool s2 = (counter1 <= 1 && counter2 >= 2);
-			Bool s3 = (counter1 <= 0 && counter2 >= 3);
+			Bool s = (counter1 <= fromInteger(num_stages) - 1 && counter2 >= 1);
+			Maybe#(Bit#(word_size)) res <- permute(inputFIFO.first(), data[0], s); inputFIFO.deq();
+			for (Integer i = 2; i <= num_stages; i = i + 1) begin
+				s = (counter1 <= fromInteger(num_stages - i)) && counter2 >= fromInteger(i);
+				res <- permute(res , data[i-1], s);
+			end
+			outputFIFO.enq(res);
 
-			let res1 <- permute(inputFIFO.first(), data1, s1); inputFIFO.deq();
-			let res2 <- permute(res1 , data2, s2);
-			let res3 <- permute(res2 , data3, s3);
-			outputFIFO.enq(res3);
-
-			if (counter1 == 3) begin
+			if (counter1 == fromInteger(num_stages)) begin
 				counter1 <= 0;
-				counter2 <= counter2 + 1;
+				if (counter2 == fromInteger(num_stages)) begin
+					counter2 <= 0;
+				end
+				else begin
+					counter2 <= counter2 + 1;
+				end
 			end
 			else begin
 				counter1 <= counter1 + 1;
@@ -70,9 +80,9 @@ package TransposeBox;
 		method Action clear;
 			counter1 <= 0;
 			counter2 <= 0;
-			data1 <= replicate(Invalid);
-			data2 <= replicate(Invalid);
-			data3 <= replicate(Invalid);
+			for (Integer i = 0; i < num_stages; i = i + 1) begin
+				data[i] <= replicate(Invalid);
+			end
 		endmethod
 	endmodule
 

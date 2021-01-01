@@ -37,7 +37,7 @@ package AccelMT;
 		Reg#(TPointer) src_end_address <- mkRegU;
 		Reg#(TPointer) dst_end_address <- mkRegU;
 
-		Ifc_TransposeBox#(32) transpose_box <- mkTransposeBox;
+		Ifc_TransposeBox#(32, 8) transpose_box <- mkTransposeBox;
 
 		Reg#(Bit#(MemAddrWidth)) i <- mkRegU;
 		Reg#(Bit#(MemAddrWidth)) j <- mkRegU;
