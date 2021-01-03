@@ -34,8 +34,6 @@ package AccelMT;
 		Reg#(TDimension) matrix_block_cols <- mkRegU;
 		Reg#(TPointer) matrix_src_data <- mkRegU;
 		Reg#(TPointer) matrix_dst_data <- mkRegU;
-		Reg#(TPointer) src_end_address <- mkRegU;
-		Reg#(TPointer) dst_end_address <- mkRegU;
 
 		Ifc_TransposeBox#(32, 8) transpose_box <- mkTransposeBox;
 
@@ -132,24 +130,21 @@ package AccelMT;
 					// Step 2. Do matrix transpose
 					par
 						$display("MT", id, " Start transpose at time ", $time);
-						action
-							UInt#(32) num_elements = zeroExtend(matrix_src_rows) * zeroExtend(matrix_src_cols);
-							src_end_address <= unpack(matrix_src_data + pack(num_elements));
-							dst_end_address <= unpack(matrix_dst_data + pack(num_elements));
-						endaction
 						transpose_done <= False;
 						transpose_box.clear;
 						k <= matrix_src_data;
 						n <= matrix_dst_data;
 						u <= 0;
 					endpar
+
+					// Transpose fully filled blocks
 					par
 						for (i <= 0; i < zeroExtend(pack(matrix_block_rows)); i <= i + 1) seq
 							for (j <= 0; j < zeroExtend(pack(matrix_block_cols)); j <= j + 1) action
 								srcBlockAddrFIFO.enq(k);
 								k <= k + 8;
 							endaction
-							k <= k + (zeroExtend(pack(matrix_src_cols)) << 3) - zeroExtend(pack(matrix_src_cols));
+							k <= matrix_src_data + (i + 1) * (zeroExtend(pack(matrix_src_cols)) << 3);
 						endseq
 
 						for (l <= 0; l < zeroExtend(pack(matrix_block_rows)); l <= l + 1) seq
@@ -157,7 +152,7 @@ package AccelMT;
 								dstBlockAddrFIFO.enq(n);
 								n <= n + (zeroExtend(pack(matrix_src_rows)) << 3);
 							endaction
-							n <= n - zeroExtend(pack((matrix_src_rows * matrix_src_cols))) + 8;
+							n <= matrix_dst_data + (l + 1) * 8;
 						endseq
 
 						for (o <= 0; o < zeroExtend(pack(matrix_block_rows)) * zeroExtend(pack(matrix_block_cols)); o <= o + 1) seq
@@ -196,7 +191,7 @@ package AccelMT;
 
 						// Push fetched data into transpose_box (Row major order)
 						seq
-							for (x <= 0; x < zeroExtend(pack(matrix_src_rows * matrix_src_cols)); x <= x + 1) action
+							for (x <= 0; x < zeroExtend(pack((matrix_block_rows * matrix_block_cols) << 6)); x <= x + 1) action
 								transpose_box.put_element.put(tagged Valid responseFIFOA.first());
 								responseFIFOA.deq();
 							endaction
@@ -207,7 +202,7 @@ package AccelMT;
 
 						// Create memory requests to store the transposed matrix
 						seq
-							while (u < zeroExtend(pack(matrix_src_rows * matrix_src_cols))) seq
+							while (u < zeroExtend(pack((matrix_block_rows * matrix_block_cols) << 6))) seq
 								action
 									v <= dstRowAddrFIFO.first; dstRowAddrFIFO.deq;
 								endaction
@@ -231,6 +226,57 @@ package AccelMT;
 							transpose_done <= True;
 						endseq
 					endpar
+
+					// Transpose paritally filled blocks on the right edge (if present)
+					if ((matrix_src_cols & 7) > 0) seq
+						i <= zeroExtend(pack(matrix_src_cols)) & 7;
+						par
+							for (k <= 0; k < i; k <= k + 1) seq
+								j <= matrix_src_data + (zeroExtend(pack(matrix_block_cols)) << 3) + k;
+								for (l <= 0; l < zeroExtend(pack(matrix_src_rows)); l <= l + 1) action
+									requestFIFOA.enq(makeReadRequest(j));
+									j <= j + zeroExtend(pack(matrix_src_cols));
+								endaction
+							endseq
+
+							seq
+								n <= matrix_dst_data + ((zeroExtend(pack(matrix_block_cols)) << 3) * zeroExtend(pack(matrix_src_rows)));
+								for (m <= 0; m < i; m <= m + 1) seq
+									for (o <= 0; o < zeroExtend(pack(matrix_src_rows)); o <= o + 1) action
+										requestFIFOB.enq(makeWriteRequest(n, responseFIFOA.first()));
+										responseFIFOA.deq();
+										n <= n + 1;
+									endaction
+								endseq
+							endseq
+						endpar
+					endseq
+
+					// Transpose paritally filled blocks on the bottom edge (if present)
+					if ((matrix_src_rows & 7) > 0) seq
+						i <= zeroExtend(pack(matrix_src_rows)) & 7;
+						par
+							seq
+								j <= matrix_src_data + ((zeroExtend(pack(matrix_block_rows)) << 3) * zeroExtend(pack(matrix_src_cols)));
+								for (k <= 0; k < i; k <= k + 1) seq
+									for (l <= 0; l < zeroExtend(pack(matrix_src_cols)); l <= l + 1) action
+										requestFIFOA.enq(makeReadRequest(j));
+										j <= j + 1;
+									endaction
+								endseq
+							endseq
+
+							for (m <= 0; m < i; m <= m + 1) seq
+								n <= matrix_dst_data + (zeroExtend(pack(matrix_block_rows)) << 3) + m;
+								for (o <= 0; o < zeroExtend(pack(matrix_src_cols)); o <= o + 1) action
+									requestFIFOB.enq(makeWriteRequest(n, responseFIFOA.first()));
+									responseFIFOA.deq();
+									n <= n + zeroExtend(pack(matrix_src_rows));
+								endaction
+							endseq
+						endpar
+					endseq
+
 					$display("MT", id, " End transpose at time ", $time);
 
 					action
