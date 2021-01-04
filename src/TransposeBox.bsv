@@ -46,8 +46,8 @@ package TransposeBox;
 
 		Vector#(num_stages, Reg#(Vector#(num_stages, Maybe#(Bit#(word_size))))) data <- replicateM(mkReg(replicate(Invalid)));
 
-		FIFO#(Maybe#(Bit#(word_size))) inputFIFO <- mkPipelineFIFO;
-		FIFO#(Maybe#(Bit#(word_size))) outputFIFO <- mkPipelineFIFO;
+		FIFO#(Maybe#(Bit#(word_size))) inputFIFO <- mkSizedFIFO(2);
+		FIFO#(Maybe#(Bit#(word_size))) outputFIFO <- mkSizedFIFO(2);
 
 		let num_stages = valueOf(num_stages);
 

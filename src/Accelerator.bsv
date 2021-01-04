@@ -57,17 +57,17 @@ package Accelerator;
 		mkConnection(accel_VC_f32.portB, interconnect.servers[14]);
 
 		// Matrix Transpose q15
-		Ifc_Accelerator accel_MT_q15 <- collectCBusIFC(mkAccelMT(0));
+		Ifc_Accelerator accel_MT_q15 <- collectCBusIFC(mkAccelMT16(0));
 		mkConnection(accel_MT_q15.portA, interconnect.servers[15]);
 		mkConnection(accel_MT_q15.portB, interconnect.servers[16]);
 
 		// Matrix Transpose q31
-		Ifc_Accelerator accel_MT_q31 <- collectCBusIFC(mkAccelMT(1));
+		Ifc_Accelerator accel_MT_q31 <- collectCBusIFC(mkAccelMT32(1));
 		mkConnection(accel_MT_q31.portA, interconnect.servers[17]);
 		mkConnection(accel_MT_q31.portB, interconnect.servers[18]);
 
 		// Matrix Transpose f32
-		Ifc_Accelerator accel_MT_f32 <- collectCBusIFC(mkAccelMT(2));
+		Ifc_Accelerator accel_MT_f32 <- collectCBusIFC(mkAccelMT32(2));
 		mkConnection(accel_MT_f32.portA, interconnect.servers[19]);
 		mkConnection(accel_MT_f32.portB, interconnect.servers[20]);
 

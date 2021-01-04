@@ -8,13 +8,40 @@ package AccelMT;
 	import Clocks::*;
 	import TransposeBox::*;
 
+	interface Ifc_AccelMT#(numeric type word_size);
+		interface MemClient portA;
+		interface MemClient portB;
+	endinterface
+
 	(* synthesize *)
-	module mkAccelMT#(parameter Bit#(BusAddrWidth) id) (IWithCBus#(Bus, Ifc_Accelerator));
-		let ifc <- exposeCBusIFC(mkAccelMTInternal(id));
+	module mkAccelMT16#(parameter Bit#(BusAddrWidth) id) (IWithCBus#(Bus, Ifc_Accelerator));
+		let ifc <- exposeCBusIFC(mkAccelMT16Wrapper(id));
 		return ifc;
 	endmodule
 
-	module [ModWithBus] mkAccelMTInternal#(parameter Bit#(BusAddrWidth) id) (Ifc_Accelerator);
+	(* synthesize *)
+	module mkAccelMT32#(parameter Bit#(BusAddrWidth) id) (IWithCBus#(Bus, Ifc_Accelerator));
+		let ifc <- exposeCBusIFC(mkAccelMT32Wrapper(id));
+		return ifc;
+	endmodule
+
+	module [ModWithBus] mkAccelMT16Wrapper#(parameter Bit#(BusAddrWidth) id) (Ifc_Accelerator);
+		Ifc_AccelMT#(16) accelerator <- mkAccelMTInternal(id);
+		interface MemClient portA = accelerator.portA;
+		interface MemClient portB = accelerator.portB;
+	endmodule
+
+	module [ModWithBus] mkAccelMT32Wrapper#(parameter Bit#(BusAddrWidth) id) (Ifc_Accelerator);
+		Ifc_AccelMT#(32) accelerator <- mkAccelMTInternal(id);
+		interface MemClient portA = accelerator.portA;
+		interface MemClient portB = accelerator.portB;
+	endmodule
+
+	module [ModWithBus] mkAccelMTInternal#(parameter Bit#(BusAddrWidth) id) (Ifc_AccelMT#(word_size))
+		provisos (
+			Add#(a, word_size, 32),
+			Add#(b, 16, word_size)
+		);
 		FIFO#(MemRequest) requestFIFOA <- mkBypassFIFO;
 		FIFO#(Bit#(BusDataWidth)) responseFIFOA <- mkBypassFIFO;
 		FIFO#(MemRequest) requestFIFOB <- mkBypassFIFO;
@@ -35,7 +62,8 @@ package AccelMT;
 		Reg#(TPointer) matrix_src_data <- mkRegU;
 		Reg#(TPointer) matrix_dst_data <- mkRegU;
 
-		Ifc_TransposeBox#(32, 8) transpose_box <- mkTransposeBox;
+		Ifc_TransposeBox#(word_size, 8) transpose_box <- mkTransposeBox;
+		let word_size = valueOf(word_size);
 
 		FIFO#(TPointer) srcBlockAddrFIFO <- mkSizedFIFO(8);
 		FIFO#(TPointer) dstBlockAddrFIFO <- mkSizedFIFO(8);
@@ -61,6 +89,8 @@ package AccelMT;
 		Reg#(Bit#(MemAddrWidth)) w <- mkRegU;
 		Reg#(Bit#(MemAddrWidth)) x <- mkRegU;
 		Reg#(Bit#(MemAddrWidth)) y <- mkRegU;
+		Reg#(Bit#(MemAddrWidth)) z <- mkRegU;
+		Reg#(Maybe#(Bit#(MemAddrWidth))) a <- mkRegU;
 
 		let actions =
 		seq
@@ -142,17 +172,36 @@ package AccelMT;
 						for (i <= 0; i < zeroExtend(pack(matrix_block_rows)); i <= i + 1) seq
 							for (j <= 0; j < zeroExtend(pack(matrix_block_cols)); j <= j + 1) action
 								srcBlockAddrFIFO.enq(k);
-								k <= k + 8;
+								if (word_size == 16) begin
+									k <= k + 4;
+								end
+								else if (word_size == 32) begin
+									k <= k + 8;
+								end
 							endaction
-							k <= matrix_src_data + (i + 1) * (zeroExtend(pack(matrix_src_cols)) << 3);
+							if (word_size == 16) seq
+								k <= matrix_src_data + (i + 1) * (zeroExtend(pack(matrix_src_cols)) << 2);
+							endseq
+							else if (word_size == 32) seq
+								k <= matrix_src_data + (i + 1) * (zeroExtend(pack(matrix_src_cols)) << 3);
+							endseq
 						endseq
 
 						for (l <= 0; l < zeroExtend(pack(matrix_block_rows)); l <= l + 1) seq
 							for (m <= 0; m < zeroExtend(pack(matrix_block_cols)); m <= m + 1) action
 								dstBlockAddrFIFO.enq(n);
-								n <= n + (zeroExtend(pack(matrix_src_rows)) << 3);
+								if (word_size == 16) begin
+									n <= n + (zeroExtend(pack(matrix_src_rows)) << 2);
+								end 
+								else if (word_size == 32) begin
+									n <= n + (zeroExtend(pack(matrix_src_rows)) << 3);
+								end
 							endaction
-							n <= matrix_dst_data + (l + 1) * 8;
+							if (word_size == 16) seq
+								n <= matrix_dst_data + (l + 1) * 4;
+							endseq else if (word_size == 32) seq
+								n <= matrix_dst_data + (l + 1) * 8;
+							endseq
 						endseq
 
 						for (o <= 0; o < zeroExtend(pack(matrix_block_rows)) * zeroExtend(pack(matrix_block_cols)); o <= o + 1) seq
@@ -169,11 +218,21 @@ package AccelMT;
 							for (r <= 0; r < 8; r <= r + 1) par
 								action
 									srcRowAddrFIFO.enq(p);
-									p <= p + zeroExtend(pack(matrix_src_cols));
+									if (word_size == 16) begin
+										p <= p + zeroExtend(pack(matrix_src_cols >> 1));
+									end
+									else if (word_size == 32) begin
+										p <= p + zeroExtend(pack(matrix_src_cols));
+									end
 								endaction
 								action
 									dstRowAddrFIFO.enq(q);
-									q <= q + zeroExtend(pack(matrix_src_rows));
+									if (word_size == 16) begin
+										q <= q + zeroExtend(pack(matrix_src_rows >> 1));
+									end
+									else if (word_size == 32) begin
+										q <= q + zeroExtend(pack(matrix_src_rows));
+									end
 								endaction
 							endpar
 						endseq
@@ -183,18 +242,38 @@ package AccelMT;
 							action
 								s <= srcRowAddrFIFO.first; srcRowAddrFIFO.deq;
 							endaction
-							for (t <= 0; t < 8; t <= t + 1) action
-								requestFIFOA.enq(makeReadRequest(s));
-								s <= s + 1;
-							endaction
+							if (word_size == 16) seq
+								for (t <= 0; t < 4; t <= t + 1) action
+									requestFIFOA.enq(makeReadRequest(s));
+									s <= s + 1;
+								endaction
+							endseq
+							else if (word_size == 32) seq
+								for (t <= 0; t < 8; t <= t + 1) action
+									requestFIFOA.enq(makeReadRequest(s));
+									s <= s + 1;
+								endaction
+							endseq
 						endseq
 
 						// Push fetched data into transpose_box (Row major order)
 						seq
-							for (x <= 0; x < zeroExtend(pack((matrix_block_rows * matrix_block_cols) << 6)); x <= x + 1) action
-								transpose_box.put_element.put(tagged Valid responseFIFOA.first());
-								responseFIFOA.deq();
-							endaction
+							if (word_size == 16) seq
+								for (x <= 0; x < zeroExtend(pack((matrix_block_rows * matrix_block_cols) << 6)); x <= x + 2) seq
+									action
+										z <= responseFIFOA.first;
+										responseFIFOA.deq;
+									endaction
+									transpose_box.put_element.put(tagged Valid extend(z[31:16]));
+									transpose_box.put_element.put(tagged Valid extend(z[15:0]));
+								endseq
+							endseq
+							else if (word_size == 32) seq
+								for (x <= 0; x < zeroExtend(pack((matrix_block_rows * matrix_block_cols) << 6)); x <= x + 1) action
+									transpose_box.put_element.put(tagged Valid truncate(responseFIFOA.first));
+									responseFIFOA.deq;
+								endaction
+							endseq
 							while (!transpose_done) action
 								transpose_box.put_element.put(Invalid);
 							endaction
@@ -207,19 +286,46 @@ package AccelMT;
 									v <= dstRowAddrFIFO.first; dstRowAddrFIFO.deq;
 								endaction
 
-								w <= 0;
-								while (w < 8) seq
-									action
-										let data <- transpose_box.get_element.get;
-										case (data) matches
-											tagged Valid .x : begin
-												requestFIFOB.enq(makeWriteRequest(v, x));
-												v <= v + 1;
-												w <= w + 1;
-											end
-											tagged Invalid : noAction;
-										endcase
-									endaction
+								if (word_size == 16) seq
+									w <= 0;
+									a <= Invalid;
+									while (w < 4) seq
+										action
+											let data <- transpose_box.get_element.get;
+											case (data) matches
+												tagged Valid .x : begin
+													case (a) matches
+														tagged Valid .b : begin
+															requestFIFOB.enq(makeWriteRequest(v, extend((b << 16) | extend(x))));
+															a <= Invalid;
+															v <= v + 1;
+															w <= w + 1;
+														end
+														tagged Invalid : begin
+															a <= tagged Valid extend(x);
+														end
+													endcase
+												end
+												tagged Invalid : noAction;
+											endcase
+										endaction
+									endseq
+								endseq
+								else if (word_size == 32) seq
+									w <= 0;
+									while (w < 8) seq
+										action
+											let data <- transpose_box.get_element.get;
+											case (data) matches
+												tagged Valid .x : begin
+													requestFIFOB.enq(makeWriteRequest(v, extend(x)));
+													v <= v + 1;
+													w <= w + 1;
+												end
+												tagged Invalid : noAction;
+											endcase
+										endaction
+									endseq
 								endseq
 								u <= u + 8;
 							endseq

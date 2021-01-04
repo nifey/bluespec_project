@@ -17,8 +17,8 @@ package Interconnect;
 		FIFO#(MemRequest) requestFIFOB <- mkSizedFIFO(2);
 		FIFO#(Bit#(BusDataWidth)) responseFIFOB <- mkFIFO1;
 
-		Vector#(MaxInitiators, FIFO#(MemRequest)) requests <- replicateM (mkSizedFIFO(4));
-		Vector#(MaxInitiators, FIFO#(Bit#(BusDataWidth))) responses <- replicateM (mkSizedFIFO(4));
+		Vector#(MaxInitiators, FIFO#(MemRequest)) requests <- replicateM (mkSizedFIFO(8));
+		Vector#(MaxInitiators, FIFO#(Bit#(BusDataWidth))) responses <- replicateM (mkSizedFIFO(8));
 		FIFO#(Bit#(5)) inflightA <- mkSizedFIFO(3);
 		FIFO#(Bit#(5)) inflightB <- mkFIFO1;
 
