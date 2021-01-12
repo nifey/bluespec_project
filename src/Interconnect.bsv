@@ -12,14 +12,14 @@ package Interconnect;
 	endinterface
 
 	module mkInterconnect#(parameter Bit#(5) max_initiators) (Ifc_Interconnect);
-		FIFO#(MemRequest) requestFIFOA <- mkSizedFIFO(2);
-		FIFO#(Bit#(BusDataWidth)) responseFIFOA <- mkSizedFIFO(2);
-		FIFO#(MemRequest) requestFIFOB <- mkSizedFIFO(2);
+		FIFO#(MemRequest) requestFIFOA <- mkSizedFIFO(8);
+		FIFO#(Bit#(BusDataWidth)) responseFIFOA <- mkSizedFIFO(8);
+		FIFO#(MemRequest) requestFIFOB <- mkSizedFIFO(8);
 		FIFO#(Bit#(BusDataWidth)) responseFIFOB <- mkFIFO1;
 
 		Vector#(MaxInitiators, FIFO#(MemRequest)) requests <- replicateM (mkSizedFIFO(8));
 		Vector#(MaxInitiators, FIFO#(Bit#(BusDataWidth))) responses <- replicateM (mkSizedFIFO(8));
-		FIFO#(Bit#(5)) inflightA <- mkSizedFIFO(3);
+		FIFO#(Bit#(5)) inflightA <- mkSizedFIFO(8);
 		FIFO#(Bit#(5)) inflightB <- mkFIFO1;
 
 		for (Bit#(5) i=0; i < max_initiators; i = i + 1) 
