@@ -49,8 +49,8 @@ package AccelMT;
 
 		BusAddr base_address = BusAddr{a:cfg_MT_addr + (id*3), o:0};
 		Reg#(TCfgStart) csr_start <- mkCBRegRW(base_address + cfg_start_offset, 0);
-		Reg#(TCfgDone) csr_done <- mkCBRegR(base_address + cfg_done_offset, 0);
-		Reg#(TCfgError) csr_error <- mkCBRegR(base_address + cfg_error_offset, 0);
+		Reg#(TCfgDone) csr_done <- mkCBRegRW(base_address + cfg_done_offset, 0);
+		Reg#(TCfgError) csr_error <- mkCBRegRW(base_address + cfg_error_offset, 0);
 
 		Reg#(TPointer) csr_src <- mkCBRegW(base_address + cfg_arg1_offset, 0);
 		Reg#(TPointer) csr_dst <- mkCBRegW(base_address + cfg_arg2_offset, 0);
@@ -336,7 +336,37 @@ package AccelMT;
 					// Transpose paritally filled blocks on the right edge (if present)
 					if ((matrix_src_cols & 7) > 0) seq
 						i <= zeroExtend(pack(matrix_src_cols)) & 7;
-						par
+						if (word_size == 16) par
+							for (k <= 0; k < (i >> 1); k <= k + 1) seq
+								j <= matrix_src_data + (zeroExtend(pack(matrix_block_cols)) << 2) + k;
+								for (l <= 0; l < zeroExtend(pack(matrix_src_rows)); l <= l + 1) action
+									requestFIFOA.enq(makeReadRequest(j));
+									j <= j + zeroExtend(pack(matrix_src_cols >> 1));
+								endaction
+							endseq
+
+							seq
+								n <= matrix_dst_data + ((zeroExtend(pack(matrix_block_cols)) << 2) * zeroExtend(pack(matrix_src_rows)));
+								for (m <= 0; m < (i >> 1); m <= m + 1) seq
+									for (o <= 0; o < zeroExtend(pack(matrix_src_rows)); o <= o + 2) seq
+										action
+											a <= tagged Valid (responseFIFOA.first); responseFIFOA.deq;
+										endaction
+										action
+											let aa = responseFIFOA.first; responseFIFOA.deq;
+											let a_val = fromMaybe(0, a);
+											let data1 = {a_val[31:16], aa[31:16]};
+											a <= tagged Valid ({a_val[15:0], aa[15:0]});
+											requestFIFOB.enq(makeWriteRequest(n, data1));
+										endaction
+										requestFIFOB.enq(makeWriteRequest(n + zeroExtend(pack(matrix_src_rows >> 1)), fromMaybe(0, a)));
+										n <= n + 1;
+									endseq
+									n <= n + zeroExtend(pack(matrix_src_rows >> 1));
+								endseq
+							endseq
+						endpar
+						else if (word_size == 32) par
 							for (k <= 0; k < i; k <= k + 1) seq
 								j <= matrix_src_data + (zeroExtend(pack(matrix_block_cols)) << 3) + k;
 								for (l <= 0; l < zeroExtend(pack(matrix_src_rows)); l <= l + 1) action
@@ -361,7 +391,47 @@ package AccelMT;
 					// Transpose paritally filled blocks on the bottom edge (if present)
 					if ((matrix_src_rows & 7) > 0) seq
 						i <= zeroExtend(pack(matrix_src_rows)) & 7;
-						par
+						if (word_size == 16) par
+							seq
+								j <= matrix_src_data + (zeroExtend(pack(matrix_block_rows)) << 2) * zeroExtend(pack(matrix_src_cols));
+								p <= matrix_src_data + (zeroExtend(pack(matrix_block_rows)) << 2) * zeroExtend(pack(matrix_src_cols)) + zeroExtend(pack(matrix_src_cols >> 1));
+								for (k <= 0; k < (i >> 1); k <= k + 1) seq
+									for (l <= 0; l < zeroExtend(pack(matrix_src_cols)); l <= l + 2) seq
+										action
+											requestFIFOA.enq(makeReadRequest(j));
+											j <= j + 1;
+										endaction
+										action
+											requestFIFOA.enq(makeReadRequest(p));
+											p <= p + 1;
+										endaction
+									endseq
+									j <= j + zeroExtend(pack(matrix_src_cols >> 1));
+									p <= p + zeroExtend(pack(matrix_src_cols >> 1));
+								endseq
+							endseq
+
+							seq
+								for (m <= 0; m < (i >> 1); m <= m + 1) seq
+									n <= matrix_dst_data + (zeroExtend(pack(matrix_block_rows)) << 2) + m;
+									for (o <= 0; o < zeroExtend(pack(matrix_src_cols)); o <= o + 2) seq
+										action
+											a <= tagged Valid (responseFIFOA.first); responseFIFOA.deq;
+										endaction
+										action
+											let aa = responseFIFOA.first; responseFIFOA.deq;
+											let a_val = fromMaybe(0, a);
+											let data1 = {a_val[31:16], aa[31:16]};
+											a <= tagged Valid ({a_val[15:0], aa[15:0]});
+											requestFIFOB.enq(makeWriteRequest(n, data1));
+										endaction
+										requestFIFOB.enq(makeWriteRequest(n + zeroExtend(pack(matrix_src_rows >> 1)), fromMaybe(0, a)));
+										n <= n + zeroExtend(pack(matrix_src_rows));
+									endseq
+								endseq
+							endseq
+						endpar
+						else if (word_size == 32) par
 							seq
 								j <= matrix_src_data + ((zeroExtend(pack(matrix_block_rows)) << 3) * zeroExtend(pack(matrix_src_cols)));
 								for (k <= 0; k < i; k <= k + 1) seq
