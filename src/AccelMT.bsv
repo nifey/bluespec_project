@@ -134,9 +134,6 @@ package AccelMT;
 					// Matrix dimensions are correct
 					// Load data source address
 					par
-						requestFIFOA.enq(makeReadRequest(csr_src + 1));
-						requestFIFOB.enq(makeReadRequest(csr_dst + 1));
-
 						// After dimension check, these registers are reused
 						// to hold the number of blocks in x and y dimension
 						action
@@ -144,17 +141,23 @@ package AccelMT;
 							matrix_block_cols <= (matrix_block_rows >> 3);
 						endaction
 
-						action
-							let pointer = responseFIFOA.first(); responseFIFOA.deq();
-							TPointer address = unpack(pointer);
-							matrix_src_data <= address;
-						endaction
+						seq
+							requestFIFOA.enq(makeReadRequest(csr_src + 1));
+							action
+								let pointer = responseFIFOA.first(); responseFIFOA.deq();
+								TPointer address = unpack(pointer);
+								matrix_src_data <= address;
+							endaction
+						endseq
 
-						action
-							let pointer = responseFIFOB.first(); responseFIFOB.deq();
-							TPointer address = unpack(pointer);
-							matrix_dst_data <= address;
-						endaction
+						seq
+							requestFIFOB.enq(makeReadRequest(csr_dst + 1));
+							action
+								let pointer = responseFIFOB.first(); responseFIFOB.deq();
+								TPointer address = unpack(pointer);
+								matrix_dst_data <= address;
+							endaction
+						endseq
 					endpar
 
 					// Step 2. Do matrix transpose

@@ -83,6 +83,7 @@ package TransposeBox;
 			for (Integer i = 0; i < num_stages; i = i + 1) begin
 				data[i] <= replicate(Invalid);
 			end
+			inputFIFO.clear;
 		endmethod
 	endmodule
 
