@@ -37,7 +37,7 @@ package Dump;
 			while (csr_start == 0) action
 			endaction
 			$display("Dumping memory contents");
-			for (i <= 0; i<1024; i <= i + 1) seq
+			for (i <= 0; i<2048; i <= i + 1) seq
 				requestFIFOA.enq(makeReadRequest(i));
 				$fwrite(file, "%x\n", responseFIFOA.first()); responseFIFOA.deq();
 			endseq

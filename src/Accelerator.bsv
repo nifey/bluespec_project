@@ -15,7 +15,7 @@ package Accelerator;
 	endmodule
 
 	module [ModWithBus] mkAcceleratorInternal (Ifc_Accelerator);
-		Ifc_Interconnect interconnect <- mkInterconnect(5'h16);
+		Ifc_Interconnect#(21) interconnect <- mkInterconnect;
 
 		// This accelerator is just used to dump memory at the end of execution
 		Ifc_Accelerator dump <- collectCBusIFC(mkDump);

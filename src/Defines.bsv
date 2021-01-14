@@ -11,9 +11,6 @@ package Defines;
 	typedef 32 BusDataWidth;
 	typedef 32 MemAddrWidth;
 
-	// Number of connections to Interconnect
-	typedef 22 MaxInitiators;
-
 	// Define the Bus
 	typedef CBus#(BusAddrWidth, BusDataWidth)		Bus;
 	typedef ModWithCBus#(BusAddrWidth, BusDataWidth, i)	ModWithBus#(type i);

@@ -3,7 +3,7 @@ default: compile link simulate
 .PHONY: compile
 compile:
 	@echo Compiling...
-	bsc -u -q -sim -simdir build -bdir build -info-dir . -keep-fires -p %/Libraries:./src -g mkTestbench -no-warn-action-shadowing src/Testbench.bsv 
+	bsc -u -q -sim -simdir build -bdir build -info-dir . -keep-fires -p %/Libraries:./src -g mkTestbench -no-warn-action-shadowing -suppress-warnings G0010:G0020:G0024:G0036:T0054 src/Testbench.bsv 
 	@echo Compilation finished
 
 .PHONY: link
