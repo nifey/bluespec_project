@@ -11,6 +11,7 @@ The objective of this project is to create accelerators in Bluespec System Veril
 First generate the input memory file by running the following commands.
 
 $ g++ gen_memory.cpp
+
 $ ./a.out
 
 This will create two new files: memory.hex and gold.hex.
@@ -39,6 +40,7 @@ After the simulation is complete, a file called output.hex will be created. It c
 after the accelerators finished processing.
 
 We can use diff to check if the output is as expected by running the command
+
 $ diff output.hex gold.hex
 
 If the above command gives no output then all the accelerators have performed their operations correctly.

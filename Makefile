@@ -1,4 +1,15 @@
-default: compile link simulate
+default: build memory.hex compile link simulate
+
+build:
+	@echo Creating build directory
+	mkdir build
+
+memory.hex:
+	@echo Generating input memory
+	g++ gen_memory.cpp
+	./a.out
+	rm a.out
+	@echo Finished Generating input memory
 
 .PHONY: compile
 compile:
