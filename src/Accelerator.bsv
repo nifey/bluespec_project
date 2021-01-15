@@ -22,37 +22,37 @@ package Accelerator;
 		mkConnection(dump.portA, interconnect.servers[0]);
 
 		// Vector XOR u8
-		Ifc_Accelerator accel_VX_u8 <- collectCBusIFC(mkAccelVX(0));
+		Ifc_Accelerator accel_VX_u8 <- collectCBusIFC(mkAccelVX8(0));
 		mkConnection(accel_VX_u8.portA, interconnect.servers[1]);
 		mkConnection(accel_VX_u8.portB, interconnect.servers[2]);
 
 		// Vector XOR u16
-		Ifc_Accelerator accel_VX_u16 <- collectCBusIFC(mkAccelVX(1));
+		Ifc_Accelerator accel_VX_u16 <- collectCBusIFC(mkAccelVX16(1));
 		mkConnection(accel_VX_u16.portA, interconnect.servers[3]);
 		mkConnection(accel_VX_u16.portB, interconnect.servers[4]);
 
 		// Vector XOR u32
-		Ifc_Accelerator accel_VX_u32 <- collectCBusIFC(mkAccelVX(2));
+		Ifc_Accelerator accel_VX_u32 <- collectCBusIFC(mkAccelVX32(2));
 		mkConnection(accel_VX_u32.portA, interconnect.servers[5]);
 		mkConnection(accel_VX_u32.portB, interconnect.servers[6]);
 
 		// Vector Copy q7
-		Ifc_Accelerator accel_VC_q7 <- collectCBusIFC(mkAccelVC(0));
+		Ifc_Accelerator accel_VC_q7 <- collectCBusIFC(mkAccelVC8(0));
 		mkConnection(accel_VC_q7.portA, interconnect.servers[7]);
 		mkConnection(accel_VC_q7.portB, interconnect.servers[8]);
 
 		// Vector Copy q15
-		Ifc_Accelerator accel_VC_q15 <- collectCBusIFC(mkAccelVC(1));
+		Ifc_Accelerator accel_VC_q15 <- collectCBusIFC(mkAccelVC16(1));
 		mkConnection(accel_VC_q15.portA, interconnect.servers[9]);
 		mkConnection(accel_VC_q15.portB, interconnect.servers[10]);
 
 		// Vector Copy q31
-		Ifc_Accelerator accel_VC_q31 <- collectCBusIFC(mkAccelVC(2));
+		Ifc_Accelerator accel_VC_q31 <- collectCBusIFC(mkAccelVC32(2));
 		mkConnection(accel_VC_q31.portA, interconnect.servers[11]);
 		mkConnection(accel_VC_q31.portB, interconnect.servers[12]);
 
 		// Vector Copy f32
-		Ifc_Accelerator accel_VC_f32 <- collectCBusIFC(mkAccelVC(3));
+		Ifc_Accelerator accel_VC_f32 <- collectCBusIFC(mkAccelVC32(3));
 		mkConnection(accel_VC_f32.portA, interconnect.servers[13]);
 		mkConnection(accel_VC_f32.portB, interconnect.servers[14]);
 
