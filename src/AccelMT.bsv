@@ -128,8 +128,8 @@ package AccelMT;
 						matrix_block_cols <= cols;
 					endaction
 				endpar
-				$display("MT", id, " > Matrix A = %d x %d", matrix_src_rows, matrix_src_cols);
-				$display("MT", id, " > Matrix B = %d x %d", matrix_block_rows, matrix_block_cols);
+				$display("MT", id, "> Matrix A = %d x %d", matrix_src_rows, matrix_src_cols);
+				$display("MT", id, "> Matrix B = %d x %d", matrix_block_rows, matrix_block_cols);
 				if (matrix_src_rows == matrix_block_cols && matrix_src_cols == matrix_block_rows) seq
 					// Matrix dimensions are correct
 					// Load data source address
@@ -162,7 +162,6 @@ package AccelMT;
 
 					// Step 2. Do matrix transpose
 					par
-						$display("MT", id, " Start transpose at time ", $time);
 						transpose_done <= False;
 						transpose_box.clear;
 						k <= matrix_src_data;
@@ -456,8 +455,6 @@ package AccelMT;
 						endpar
 					endseq
 
-					$display("MT", id, " End transpose at time ", $time);
-
 					action
 						// Set the CSR bits
 						csr_done <= 1;
@@ -472,7 +469,7 @@ package AccelMT;
 						csr_start <= 0;
 					endaction
 				endseq
-				$display("MT", id, " Done with work at time ", $time);
+				$display("MT", id, "> Done with work at time ", $time);
 			endseq
 		endseq;
 

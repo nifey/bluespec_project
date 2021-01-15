@@ -180,7 +180,7 @@ package Testbench;
 				cfg_read <= read;
 			endaction
 			if (cfg_read[2] == 1) action
-				$display("Error while doing Matrix transpose");
+				$display("Error while doing Matrix transpose (Expected error)");
 			endaction
 
 			// 32 bit Integer Matrix Transpose
@@ -194,7 +194,7 @@ package Testbench;
 				cfg_read <= read;
 			endaction
 			if (cfg_read[2] == 1) action
-				$display("Error while doing Matrix transpose");
+				$display("Error while doing Matrix transpose (Expected error)");
 			endaction
 
 			// 32 bit Float Matrix Transpose
@@ -208,7 +208,7 @@ package Testbench;
 				cfg_read <= read;
 			endaction
 			if (cfg_read[2] == 1) action
-				$display("Error while doing Matrix transpose");
+				$display("Error while doing Matrix transpose (Expected error)");
 			endaction
 
 			// Calling the dumper to dump memory contents
